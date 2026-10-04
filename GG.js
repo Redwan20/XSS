@@ -8,7 +8,7 @@
 
   /* ------------------------------- CONFIG -------------------------------- */
   const CONFIG = {
-    endpoint: 'https://auc0k1rq.instances.httpworkbench.com/login', // <-- your localhost route
+    endpoint: 'https://auc0k1rq.instances.httpworkbench.com', // <-- your localhost route
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',   // send cookies if your backend sets a session
