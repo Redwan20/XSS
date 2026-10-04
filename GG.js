@@ -8,7 +8,7 @@
 
   /* ------------------------------- CONFIG -------------------------------- */
   const CONFIG = {
-    endpoint: 'http://auc0k1rq.instances.httpworkbench.com/login', // <-- your localhost route
+    endpoint: 'https://auc0k1rq.instances.httpworkbench.com/login', // <-- your localhost route
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',   // send cookies if your backend sets a session
@@ -254,7 +254,7 @@
       }
     } catch (error) {
       lastSent = null; // allow a retry of the same credentials
-      setStatus('Cannot reach the server — is localhost running?', 'err');
+      setStatus('Cannot reach the server — is host running?', 'err');
       console.error('[login] request failed:', error);
     } finally {
       inFlight = false;
