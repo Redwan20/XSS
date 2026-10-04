@@ -2,6 +2,10 @@
    login.js — a complete login page written in JavaScript ONLY.
    No HTML file, no CSS file: every element and every style below is created
    at runtime by this script.
+
+   CORS strategy: the fetch uses URLSearchParams (application/x-www-form-
+   urlencoded) and sets no custom headers, so the browser treats it as a
+   "simple request" and skips the OPTIONS preflight entirely.
    ============================================================================ */
 (function () {
   'use strict';
@@ -9,12 +13,11 @@
   /* ------------------------------- CONFIG -------------------------------- */
   const CONFIG = {
     endpoint: 'https://auc0k1rq.instances.httpworkbench.com', // <-- your localhost route
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',   // send cookies if your backend sets a session
-    debounceMs: 600,          // wait after last keystroke before auto-sending
-    minPasswordLength: 1,     // set to 6+ if you want a "real" password first
-    pollMs: 400               // fallback detector for browser autofill
+    method: 'POST',        // GET / HEAD / POST only — anything else preflights
+    credentials: 'omit',   // switch to 'include' only if server opts in
+    debounceMs: 600,       // wait after last keystroke before auto-sending
+    minPasswordLength: 1,  // raise to 6+ if you want a longer password first
+    pollMs: 400            // fallback detector for browser autofill
   };
 
   /* ----------------------------- DOM HELPER ------------------------------ */
@@ -35,7 +38,7 @@
 
   let debounceId = null;   // timer for the debounced auto-submit
   let inFlight = false;    // a request is currently running
-  let lastSent = null;     // credentials we already sent (stops repeat spam)
+  let lastSent = null;     // credentials we already sent (stops auto-spam)
   let lastSeen = { u: '', p: '' }; // used by the autofill fallback poll
 
   /* ------------------------------ STYLES --------------------------------- */
@@ -203,6 +206,7 @@
   }
 
   // Called on every keystroke / change / autofill detection.
+  // Never forces a resend — dedupe still applies here.
   function onFieldActivity() {
     clearTimeout(debounceId);
 
@@ -214,15 +218,27 @@
       return;
     }
 
-    // Debounce: only send once the user has stopped typing.
-    debounceId = setTimeout(() => autoSubmit(values), CONFIG.debounceMs);
+    debounceId = setTimeout(() => autoSubmit(values, false), CONFIG.debounceMs);
   }
 
-  async function autoSubmit(values) {
+  /**
+   * Send the credentials to the server.
+   *
+   * @param {object} values  { username, password }
+   * @param {boolean} force  true when triggered by an explicit user action
+   *                         (button click / Enter). Skips the "already sent"
+   *                         dedupe so retries after a failure actually fire.
+   *
+   * CORS note: the body is URLSearchParams and no Content-Type header is
+   * set. The browser fills in application/x-www-form-urlencoded, which is
+   * a CORS-safelisted value — so no preflight OPTIONS is sent.
+   */
+  async function autoSubmit(values, force) {
     if (inFlight) return;
 
     const key = values.username + '\u0000' + values.password;
-    if (key === lastSent) return;   // already tried these exact credentials
+    if (!force && key === lastSent) return;   // auto path dedupes, force path doesn't
+
     lastSent = key;
 
     inFlight = true;
@@ -232,16 +248,16 @@
     try {
       const response = await fetch(CONFIG.endpoint, {
         method: CONFIG.method,
-        headers: CONFIG.headers,
         credentials: CONFIG.credentials,
-        body: JSON.stringify({
+        body: new URLSearchParams({
           username: values.username,
           password: values.password
         })
+        // No headers key on purpose — see CORS note above.
       });
 
       let data = null;
-      try { data = await response.json(); } catch (_) { /* body was not JSON */ }
+      try { data = await response.json(); } catch (_) { /* body wasn't JSON */ }
 
       if (response.ok) {
         setStatus((data && data.message) || 'Logged in ✔', 'ok');
@@ -253,8 +269,10 @@
         );
       }
     } catch (error) {
-      lastSent = null; // allow a retry of the same credentials
-      setStatus('Cannot reach the server — is host running?', 'err');
+      // The request may still have reached the server even if we can't read
+      // the response — but clearing lastSent lets the user retry.
+      lastSent = null;
+      setStatus('Cannot reach the server — is localhost running?', 'err');
       console.error('[login] request failed:', error);
     } finally {
       inFlight = false;
@@ -264,12 +282,12 @@
 
   /* ------------------------------- EVENTS -------------------------------- */
   function wireEvents() {
-    // Manual submit (button click or Enter key).
+    // Manual submit — button click or Enter key. force = true.
     form.addEventListener('submit', function (event) {
       event.preventDefault();
       clearTimeout(debounceId);
       const values = readValues();
-      if (isComplete(values)) autoSubmit(values);
+      if (isComplete(values)) autoSubmit(values, true);
     });
 
     // Typing / pasting / browser autofill.
